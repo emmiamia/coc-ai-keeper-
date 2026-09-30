@@ -1,0 +1,29 @@
+{
+  "id": "synthetic_test",
+  "title": "TEST / SYNTHETIC SCENARIO — NOT PAPER CHASE",
+  "setting": "Synthetic test room",
+  "player_premise": "Inspect a fictional room.",
+  "keeper_truth": "Synthetic fixture only; a test token is in the locked drawer.",
+  "starting_state": {
+    "current_location": "room"
+  },
+  "core_entities": {
+    "locations": [
+      "room",
+      "hall"
+    ],
+    "npcs": [
+      "caretaker"
+    ],
+    "clues": [
+      "token"
+    ],
+    "events": [
+      "night_signal"
+    ],
+    "encounters": [
+      "visitor"
+    ]
+  },
+  "improvisation_policy": "No invented canonical facts. Test references only."
+}

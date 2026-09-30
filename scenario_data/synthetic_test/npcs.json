@@ -1,0 +1,41 @@
+[
+  {
+    "id": "caretaker",
+    "player_name": "Synthetic caretaker",
+    "role": "Test NPC",
+    "default_attitude": "neutral",
+    "keeper_context": "Internal test context.",
+    "knowledge_items": [
+      {
+        "id": "greeting",
+        "information": "This is a synthetic test room.",
+        "access": "public"
+      },
+      {
+        "id": "small_talk",
+        "information": "The room is quiet.",
+        "access": "conversational"
+      },
+      {
+        "id": "drawer_secret",
+        "information": "A test token is in the drawer.",
+        "access": "guarded",
+        "reveal_conditions": {
+          "required_flags": [
+            "trusted"
+          ]
+        },
+        "state_changes": {
+          "reveal_information": [
+            "drawer_secret"
+          ]
+        }
+      },
+      {
+        "id": "internal",
+        "information": "Internal-only test reference.",
+        "access": "keeper_only"
+      }
+    ]
+  }
+]

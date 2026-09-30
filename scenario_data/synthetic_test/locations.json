@@ -1,0 +1,29 @@
+[
+  {
+    "id": "room",
+    "player_name": "Test room",
+    "player_description": "A fictional room with a locked drawer.",
+    "keeper_context": "Test token exists in the drawer.",
+    "npc_ids": [
+      "caretaker"
+    ],
+    "clue_ids": [
+      "token"
+    ],
+    "event_ids": [
+      "night_signal"
+    ],
+    "encounter_ids": [
+      "visitor"
+    ],
+    "action_categories": [
+      "inspect",
+      "talk"
+    ]
+  },
+  {
+    "id": "hall",
+    "player_name": "Test hall",
+    "player_description": "An empty fictional hall."
+  }
+]

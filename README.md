@@ -1,6 +1,6 @@
-# CoC AI Keeper — first milestone
+# CoC AI Keeper — Milestone 2
 
-Local project skeleton only. There is no prepared scenario, AI narration, Keeper prompt, RAG or live mechanics orchestration. Placeholder responses are clearly labeled. No API key is required.
+The playable HTTP flow remains the Milestone 1 placeholder skeleton. Milestone 2 adds a typed, local JSON Scenario Knowledge Layer with a synthetic test fixture. No prepared licensed scenario, AI narration, Keeper Agent, LLM integration, RAG, or live mechanics orchestration is implemented. No API key is required.
 
 ## Structure
 
@@ -8,12 +8,12 @@ Local project skeleton only. There is no prepared scenario, AI narration, Keeper
 - `backend/app/api/`: validated FastAPI routes.
 - `backend/app/agent/`: placeholder turn coordinator, mechanics client protocol, future truth/improvisation constraints.
 - `backend/app/llm/`: swappable asynchronous provider protocol.
-- `backend/app/scenario/`: canonical repository interface and empty placeholder implementation.
+- `backend/app/scenario/`: typed canonical models, deterministic JSON retrieval, explicit visibility projections, and the existing placeholder repository.
 - `backend/app/models/`: typed session, message and structured game state.
 - `backend/app/state/` and `db/`: transactional SQLite session repository.
 - `mcp_server/`: stdio MCP server and deterministic mechanics functions.
 - `backend/tests/`, `mcp_server/tests/`: persistence, API validation, mechanics and MCP schema tests.
-- `scenario_data/`: instructions for future private licensed JSON, no scenario content.
+- `scenario_data/`: authoring instructions and an explicitly synthetic test fixture; no licensed scenario content.
 
 ## Run locally
 
@@ -75,6 +75,108 @@ Mechanics support bounded `NdM` notation, regular/hard/extreme checks at full/ha
 
 This project lives in the existing CoC AI Keeper repository at `/Users/emmayue/Desktop/coc-ai-keeper`. It was moved out of the unrelated NourishSteps workspace; no existing NourishSteps app files were modified. Private scenario truth is never returned through these endpoints; before real scenarios are enabled, player-facing projections and unlock filtering must be implemented. Full session responses are safe only for this empty placeholder milestone.
 
-## Verification results
+## Milestone 1 checkpoint verification
 
 15 pytest tests passed; frontend production build passed with Vite 7.3.6. npm audit reported zero vulnerabilities. One upstream Starlette/httpx TestClient deprecation warning remains, without test failures. The browser flow has not been manually exercised; API restart persistence is verified by tests.
+
+
+## Milestone 2: Scenario Knowledge architecture
+
+Scenario Knowledge is canonical story/world truth. Game State records what happened in
+this playthrough. MCP supplies deterministic mechanics. A future Keeper Agent will
+orchestrate these boundaries and narration; that agent is not implemented here.
+
+`JsonScenarioRepository(root)` reads six typed files per scenario directory:
+`scenario.json`, `locations.json`, `npcs.json`, `clues.json`, `events.json`, and
+`encounters.json`. Entity files are arrays. `validate_scenario(id)` performs explicit
+schema, duplicate-ID, and cross-reference validation for authoring/preflight.
+`load_scenario(id)` reads metadata, starting state, policy, and entity references;
+it does not load all entities. `get_location`, `get_npc`, `get_clue`, `get_event`,
+and `get_encounter` retrieve independent typed entities. Category files are read
+on demand; there are no embeddings, vector database, or cache invalidation rules.
+
+`get_context(scenario_id, state, location_id=None, npc_ids=None, action=None)` returns
+Keeper-only context scoped to the selected/current location, NPCs, available clues,
+previously discovered clues, and eligible events/encounters. Previously discovered
+clues remain accessible after leaving a location. It excludes unrelated entities
+and global scenario truth. Location event/encounter references select candidates;
+`event_eligible` can check an explicitly selected event independently. Conditions
+use structured action categories, flags, phase, coarse time, location, and known
+information. No natural-language inference or automatic progression is performed.
+
+Canonical models explicitly separate `keeper_truth`/`keeper_context` from player
+fields. Keeper context must never be returned through player HTTP routes.
+`player_location` excludes clue IDs and secrets. `player_clue` requires recorded
+discovery. `knows_clue` and `require_discovered_clues` let future orchestration
+reject dependencies on undiscovered information without changing player knowledge.
+An available clue is not a discovered clue. `revealable_knowledge` checks public,
+conversational, and guarded NPC knowledge against conditions and a talk action;
+it never returns Keeper-only items and does not itself disclose or persist anything.
+`player_npc_knowledge` returns public information and explicitly recorded revelations,
+never Keeper-only items. Knowledge item IDs are unique across a scenario.
+
+State now includes `phase` (open/focused investigation, climax, epilogue),
+`game_time` (positive day and morning/afternoon/evening/night), and optional
+`pending_push` (original check ID, skill/value/difficulty, context, permission,
+and consequence reference). Pending push is only storage: it causes no roll.
+One declared MCP check still produces one random roll. Encounter branches mark
+mechanics as supported, partial, or unsupported; the fixture marks attack unsupported.
+
+SQLite still stores the same session JSON document in the same table. Existing
+session documents receive missing state fields through model defaults when read;
+no SQL migration is needed. Future writes persist the extended document.
+`GameStateRepository.create(id, starting_state)` copies authored starting state.
+`update_state(id, transition)` validates trusted internal changes transactionally;
+failed transitions roll back. `record_clue_discovery(id, clue_id, scenarios)` validates
+the clue and records discovery idempotently, **only after trusted orchestration has
+resolved the discovery**. It does not enforce checks, execute outcomes/unlocks, or
+infer anything from player text. No unrestricted HTTP state-update endpoint exists.
+The default API continues to accept only the placeholder scenario.
+
+The fixture at `scenario_data/synthetic_test/` is labeled
+**TEST / SYNTHETIC SCENARIO — NOT PAPER CHASE**. It contains two fictional locations,
+a drawer token, a caretaker with four knowledge access types, a gated nighttime
+event, and a branching visitor encounter. It is committed test data; future
+licensed scenario content must be supplied separately from an authorized source.
+
+Run the complete suite from the repository root:
+
+```sh
+.venv/bin/python -m pytest -q -p no:cacheprovider
+```
+
+Run just the new knowledge/state tests:
+
+```sh
+.venv/bin/python -m pytest -q -p no:cacheprovider backend/tests/test_scenario_knowledge.py
+```
+
+For programmatic use (with `PYTHONPATH=backend`), initialize
+`JsonScenarioRepository('scenario_data')`, validate/load `synthetic_test`, create a
+session using its starting state, then call `record_clue_discovery` and reload it
+through a fresh `GameStateRepository`. Tests demonstrate this flow, guarded NPC
+knowledge, afternoon-versus-night event eligibility, legacy defaults, rollback,
+and persistence of phase, game time, and pending push.
+
+
+Milestone 2 verification: all 43 tests passed (28 new parameterized knowledge/state
+cases plus the original 15), and the frontend production build passed. Live
+Vite-proxy requests verified create/action/retrieve, direct SQLite equality, and
+reload after an actual FastAPI process restart. A live MCP stdio client discovered
+and called all three intended tools. One upstream Starlette/httpx TestClient
+deprecation warning remains. Browser button interactions were not manually exercised.
+
+
+## Milestone 2B: private local scenario population
+
+The local `scenario_data/paper_chase/` directory now contains six typed JSON files
+adapted from the supplied specification. It is deliberately Git-ignored and is
+not enabled in the placeholder HTTP app. No source PDF, agent, LLM, Rules KB,
+embeddings, combat implementation, or MCP changes were added.
+
+See `scenario_data/README.md` for data/schema adaptations, resolution-flag meanings,
+limitations, private-data provisioning, and the local structural-test command.
+The complete suite passes 66 tests with the private data present (43 existing plus
+23 Paper Chase cases); one existing Starlette/httpx deprecation warning remains.
+A checkout without private data skips those 23 cases while keeping the existing
+schema, synthetic-fixture, API/persistence, and MCP tests available.

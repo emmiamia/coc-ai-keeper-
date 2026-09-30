@@ -1,0 +1,44 @@
+[
+  {
+    "id": "visitor",
+    "trigger": {
+      "required_flags": [
+        "signal_heard"
+      ],
+      "location_id": "room"
+    },
+    "player_presentation": "A synthetic visitor arrives.",
+    "keeper_context": "No real scenario reference.",
+    "branches": {
+      "talk": {
+        "outcome": {
+          "player_reference": "Synthetic conversation."
+        }
+      },
+      "flee": {
+        "outcome": {
+          "player_reference": "You enter the test hall.",
+          "state_changes": {
+            "current_location": "hall"
+          }
+        }
+      },
+      "follow": {
+        "requirements": {
+          "discovered_clues": [
+            "token"
+          ]
+        },
+        "outcome": {
+          "player_reference": "Synthetic follow response."
+        }
+      },
+      "attack": {
+        "mechanic_support": "unsupported",
+        "outcome": {
+          "keeper_context": "Combat resolution is not implemented."
+        }
+      }
+    }
+  }
+]

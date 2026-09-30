@@ -5,7 +5,25 @@ from pydantic import BaseModel, Field
 def now():
     return datetime.now(timezone.utc).isoformat()
 
+InvestigationPhase = Literal['open_investigation', 'focused_investigation', 'climax', 'epilogue']
+
+class GameTime(BaseModel):
+    day: int = Field(default=1, ge=1)
+    period: Literal['morning', 'afternoon', 'evening', 'night'] = 'morning'
+
+class PendingPush(BaseModel):
+    check_id: str
+    skill_name: str
+    skill_value: int = Field(ge=0, le=100)
+    difficulty: Literal['regular', 'hard', 'extreme'] = 'regular'
+    context: str
+    allowed: bool = False
+    consequence_reference: str
+
 class GameState(BaseModel):
+    phase: InvestigationPhase = 'open_investigation'
+    game_time: GameTime = Field(default_factory=GameTime)
+    pending_push: PendingPush | None = None
     current_location: str | None = None
     hp: int = Field(default=10, ge=0)
     san: int = Field(default=50, ge=0, le=99)

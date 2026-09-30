@@ -1,0 +1,37 @@
+[
+  {
+    "id": "token",
+    "location_id": "room",
+    "category": "test_object",
+    "keeper_truth": "Canonical synthetic token in drawer.",
+    "player_reveal": "You found a synthetic test token.",
+    "availability": {
+      "required_flags": [
+        "drawer_open"
+      ],
+      "location_id": "room"
+    },
+    "discovery_actions": [
+      "inspect"
+    ],
+    "discovery_context": "Inspect the opened drawer.",
+    "required_checks": [
+      {
+        "skill_name": "Spot Hidden",
+        "push_allowed": true,
+        "push_consequence_reference": "Synthetic failure reference"
+      }
+    ],
+    "success": {
+      "player_reference": "Synthetic discovery success.",
+      "state_changes": {
+        "discover_clues": [
+          "token"
+        ]
+      }
+    },
+    "failure": {
+      "player_reference": "Synthetic discovery failure."
+    }
+  }
+]

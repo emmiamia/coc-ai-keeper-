@@ -1,0 +1,36 @@
+[
+  {
+    "id": "night_signal",
+    "trigger": {
+      "phases": [
+        "focused_investigation"
+      ],
+      "periods": [
+        "night"
+      ],
+      "required_flags": [
+        "drawer_open"
+      ],
+      "forbidden_flags": [
+        "signal_blocked"
+      ],
+      "location_id": "room",
+      "actions": [
+        "wait"
+      ]
+    },
+    "outcomes": {
+      "default": {
+        "player_reference": "A synthetic test signal sounds.",
+        "state_changes": {
+          "flags": {
+            "signal_heard": true
+          }
+        },
+        "next_encounters": [
+          "visitor"
+        ]
+      }
+    }
+  }
+]
