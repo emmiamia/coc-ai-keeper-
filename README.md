@@ -180,3 +180,64 @@ The complete suite passes 66 tests with the private data present (43 existing pl
 23 Paper Chase cases); one existing Starlette/httpx deprecation warning remains.
 A checkout without private data skips those 23 cases while keeping the existing
 schema, synthetic-fixture, API/persistence, and MCP tests available.
+
+
+## Milestone 3: Minimal Rules Knowledge Layer
+
+Scenario Knowledge is canonical scenario truth. Rules Knowledge supplies generic
+resolution guidance. Game State is current playthrough truth. MCP executes dice
+and mechanical checks. A future Keeper Agent will orchestrate them and narrate;
+it is not implemented.
+
+`backend/app/rules/models.py` defines typed rules and guidance;
+`rules_data/core_rules.json` contains seven concise implementation summaries:
+Regular/Hard/Extreme percentile checks, explicit pushed skill checks, Luck, SAN,
+and bounded dice expressions. This is a limited mechanics subset needed by the
+supported scenario, not a rulebook reproduction. No rulebook PDF is ingested.
+
+`JsonRulesRepository()` loads the local catalog (or accepts an explicit file path).
+`get_rule(rule_id)` returns one rule and raises `KeyError` for an unknown ID.
+`get_rules_for_mechanic(mechanic)` returns only matching rules, in file order,
+and returns an empty list for unknown mechanics. `get_check_guidance()` returns
+request/avoid guidance and the fixed resolution priority:
+scenario instruction, then generic rules, then safe Keeper judgment.
+Returned models are copies; retrieval does not roll dice, update state, authorize
+checks, classify actions, call MCP, or select scenario outcomes.
+
+Skill guidance matches the existing MCP thresholds: full value, floor(value/2),
+and floor(value/5). Luck reuses `skill_check` with name Luck, current Luck value,
+and regular difficulty; orchestration must supply that value (no new Luck state
+field or Luck-spending system was added). SAN maps to `san_check`, using current
+SAN and explicit scenario-provided success/failure loss expressions. Missing SAN
+loss values remain unresolved; generic rules do not invent them. Dice maps to
+`roll_dice` using its existing bounded NdM grammar.
+
+Pushing applies only to eligible failed skill checks and requires an explicit
+player choice and justified/changed approach. It is a new declared check, never
+an automatic reroll. Eligibility and more serious consequences remain with the
+scenario/future orchestration. Luck and SAN checks are not pushable. Full combat,
+critical/fumble resolution, bonus/penalty dice, opposed checks, Luck spending,
+and the full insanity system remain unsupported.
+
+Future flow: obtain the scenario's permitted check alternatives, retrieve the
+matching generic rule, let future orchestration declare one valid check, then
+call MCP once. A push requires a separate explicit decision; this repository
+performs none of those orchestration steps.
+
+Run the new rules tests:
+
+```sh
+.venv/bin/python -m pytest -q -p no:cacheprovider backend/tests/test_rules.py
+```
+
+The complete-suite command remains:
+
+```sh
+.venv/bin/python -m pytest -q -p no:cacheprovider
+```
+
+Milestone 3 verification: 89 tests passed (66 existing plus 23 rules cases), the
+frontend production build passed, and a live MCP stdio client discovered and called
+all three unchanged tools. Existing restart persistence tests passed.
+`git diff --check` passed. The existing Starlette/httpx TestClient deprecation
+warning remains.

@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "scope": "Limited implementation-oriented mechanics for this prototype; not a rulebook reproduction.",
+  "rules": [
+    {
+      "id": "skill_regular",
+      "mechanic": "skill_check",
+      "mcp_tool": "skill_check",
+      "difficulty": "regular",
+      "summary": "Percentile regular check: succeed at or below the skill value divided by 1, rounded down. MCP owns the roll.",
+      "resolution": {
+        "threshold_source": "skill_value",
+        "threshold_divisor": 1
+      }
+    },
+    {
+      "id": "skill_hard",
+      "mechanic": "skill_check",
+      "mcp_tool": "skill_check",
+      "difficulty": "hard",
+      "summary": "Percentile hard check: succeed at or below the skill value divided by 2, rounded down. MCP owns the roll.",
+      "resolution": {
+        "threshold_source": "skill_value",
+        "threshold_divisor": 2
+      }
+    },
+    {
+      "id": "skill_extreme",
+      "mechanic": "skill_check",
+      "mcp_tool": "skill_check",
+      "difficulty": "extreme",
+      "summary": "Percentile extreme check: succeed at or below the skill value divided by 5, rounded down. MCP owns the roll.",
+      "resolution": {
+        "threshold_source": "skill_value",
+        "threshold_divisor": 5
+      }
+    },
+    {
+      "id": "pushed_roll",
+      "mechanic": "pushed_roll",
+      "mcp_tool": "skill_check",
+      "summary": "After a failed eligible skill check, one explicitly chosen, justified push is a new check; failure may have a more serious consequence. Never reroll automatically.",
+      "requires_failed_eligible_skill_check": true,
+      "requires_explicit_player_authorization": true,
+      "requires_justified_or_changed_approach": true,
+      "automatic_reroll": false,
+      "new_declared_check": true,
+      "eligibility_authority": "scenario_and_future_orchestrator",
+      "consequence_source": "scenario_or_safe_keeper_judgment",
+      "failed_push_may_have_more_serious_consequence": true,
+      "max_pushes_per_original_check": 1,
+      "applies_to": "eligible_skill_checks_only"
+    },
+    {
+      "id": "luck_check",
+      "mechanic": "luck_check",
+      "mcp_tool": "skill_check",
+      "summary": "Use the current Luck value for a regular percentile check through the existing skill-check primitive. This subset does not support Luck spending or pushing Luck checks.",
+      "tool_skill_name": "Luck",
+      "tool_difficulty": "regular",
+      "resolution": {
+        "threshold_source": "luck_value",
+        "threshold_divisor": 1
+      },
+      "push_allowed": false,
+      "luck_spending_supported": false
+    },
+    {
+      "id": "san_check",
+      "mechanic": "san_check",
+      "mcp_tool": "san_check",
+      "summary": "Compare a percentile roll to current SAN. Supply both loss expressions from the scenario; MCP evaluates the applicable loss and clamps SAN. Missing expressions require explicit resolution.",
+      "threshold_source": "current_san",
+      "loss_expression_source": "scenario",
+      "required_tool_arguments": [
+        "current_san",
+        "success_loss",
+        "failure_loss"
+      ],
+      "unspecified_loss_policy": "require_explicit_resolution_do_not_invent",
+      "loss_calculation_owner": "mcp",
+      "push_allowed": false
+    },
+    {
+      "id": "dice_expression",
+      "mechanic": "dice_expression",
+      "mcp_tool": "roll_dice",
+      "summary": "Use bounded positive NdM expressions. MCP generates the dice and total; this subset has no arithmetic modifiers.",
+      "notation": "NdM",
+      "examples": [
+        "1d4",
+        "1d6",
+        "1d10",
+        "1d100"
+      ],
+      "min_dice": 1,
+      "max_dice": 100,
+      "min_sides": 1,
+      "max_sides": 1000,
+      "arithmetic_modifiers_supported": false,
+      "resolution_owner": "mcp"
+    }
+  ],
+  "check_guidance": {
+    "request_when": [
+      "The outcome is meaningfully uncertain and failure has a meaningful consequence.",
+      "The scenario explicitly requests a check."
+    ],
+    "avoid_when": [
+      "Ordinary actions have no meaningful uncertainty.",
+      "Scenario or state already guarantees the outcome.",
+      "Repeating attempts until success has no scenario or rule justification."
+    ],
+    "scenario_instruction_overrides_generic_guidance": true,
+    "resolution_priority": [
+      "scenario_instruction",
+      "generic_rules",
+      "safe_keeper_judgment"
+    ],
+    "automatic_action_classification": false
+  },
+  "unsupported_mechanics": [
+    "full_combat",
+    "critical_and_fumble_resolution",
+    "bonus_and_penalty_dice",
+    "opposed_checks",
+    "luck_spending",
+    "full_insanity_system"
+  ]
+}
