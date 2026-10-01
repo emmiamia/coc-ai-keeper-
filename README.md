@@ -607,3 +607,55 @@ Milestone 4D.1 verification: 238 backend/MCP cases passed (225 retained plus 13
 new), 15 frontend tests passed (9 retained plus 6 new), the production build passed,
 and `git diff --check` passed. Only the existing Starlette/httpx deprecation warning
 remains. No live Gemini request or Git commit was made; MCP tools are unchanged.
+
+## Milestone UI-1: investigation dossier presentation
+
+The supplied mockup guides the dark case cover, warm parchment transcript, serif
+hierarchy, muted burgundy composer, and layered investigator folder. All texture
+and ornaments use local CSS or small original inline SVG marks; no image assets,
+external fonts, artwork downloads, or new gameplay dependencies are required.
+Desktop allocates approximately 70% to the transcript and 30% to the dossier. The
+transcript scrolls independently for long sessions; the composer is anchored near
+the bottom. Narrow screens stack the dossier below the transcript and wrap header
+controls. Keeper/player roles use archival labels, distinct marks, and faint rules,
+not chat bubbles or separate cards. An empty case has an intentional opening state.
+
+New Game, Continue Game, multiline submissions, reload, the synchronous request
+lock, stable retry IDs, and clarification/error semantics remain unchanged. Continue
+Game reveals the existing session-reference input in a native disclosure. Session
+UUIDs and friendly timestamps are available in a quiet dossier disclosure. Opening
+briefing text is the only case-note source; it is never generated from Keeper truth.
+Saved clarification remains part of the normal transcript. Unsupported gameplay
+receives non-error feedback, while real failures retain the existing failure message.
+
+The minimal additive projection is `PlayerState.clue_names`, keyed only by already
+discovered IDs. Names come from the optional authored `Clue.player_name`; private
+Paper Chase data and the public synthetic fixture receive display labels. Discovery
+IDs are retained for compatibility, but the UI never parses them into names or
+renders them as clue labels. Missing labels use `Discovered evidence`. No hidden
+clue names, reveal text, conditions, or internal state are added to the projection.
+
+The dossier shows real current HP and SAN values. Maxima and numeric roll results
+are not exposed, so no denominators, percentage gauges, invented roll values, or
+prose-parsed mechanic badges are shown. Colored rules are decorative, not gauges.
+The existing pending-push boolean can render a small `Pending push` note; it is not
+a new push control. Richer check rows would need an explicit player-safe projection
+of authorized skill/difficulty/value/roll/outcome metadata, which is outside UI-1.
+
+Keyboard focus is visible; controls have labels and disabled states; Enter in the
+textarea remains a newline. Decorative SVGs are hidden from assistive technology.
+Text stays high-contrast and at comfortable reading sizes, status includes words
+rather than color alone, and there are no decorative animations. Native disclosure
+controls keep secondary information reachable without dominating the case file.
+
+Verification: 241 backend/MCP tests passed (238 retained plus 3 clue-projection
+cases), all 26 frontend tests passed (15 retained plus 11 presentation cases), Vite
+production build passed, and `git diff --check` passed. New rendering tests cover
+controls, multiline input, loading, safe labels, case notes, clarification/error
+presentation, persisted transcripts, honest vitals, and pending-push metadata.
+The existing Starlette/httpx deprecation warning remains. Browser pixel inspection
+was unavailable; the local preview is http://localhost:5174. For manual QA, refresh
+after backend reload, inspect a continued case and an empty case, expand Continue
+Game/session reference, try keyboard navigation, and check desktop/narrow layouts.
+No gameplay logic, prompts, mechanics, persistence, or discovery gates are changed.
+No Git commit is created for UI-1.

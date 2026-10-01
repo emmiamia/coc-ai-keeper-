@@ -95,6 +95,7 @@ class Clue(KnowledgeModel):
     category: str
     keeper_truth: str
     player_reveal: str
+    player_name: str = 'Discovered evidence'
     # Authored player-safe question, never the undiscovered answer.
     discovery_question: str | None = None
     availability: Conditions = Field(default_factory=Conditions)

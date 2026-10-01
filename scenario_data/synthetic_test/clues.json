@@ -32,6 +32,7 @@
     },
     "failure": {
       "player_reference": "Synthetic discovery failure."
-    }
+    },
+    "player_name": "Synthetic Test Token"
   }
 ]
