@@ -1,6 +1,6 @@
-# CoC AI Keeper — Milestone 2
+# CoC AI Keeper — Milestone 4D investigation loop
 
-The playable HTTP flow remains the Milestone 1 placeholder skeleton. Milestone 2 adds a typed, local JSON Scenario Knowledge Layer with a synthetic test fixture. No prepared licensed scenario, AI narration, Keeper Agent, LLM integration, RAG, or live mechanics orchestration is implemented. No API key is required.
+Milestone 2 adds a typed, local JSON Scenario Knowledge Layer with a synthetic test fixture. The served React/FastAPI app now uses the real Keeper investigation loop for the prepared local Paper Chase prototype. It coordinates scoped knowledge, Gemini decisions, local MCP checks, and SQLite; full scenario gameplay is not implemented. Normal tests use mocks and require no API key.
 
 ## Structure
 
@@ -36,7 +36,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5174. Vite proxies API calls to port 8000. Start New Game, submit a message, refresh, then select Continue Game. The browser remembers the last session ID; paste any saved ID to resume another session. All game content lives in SQLite, not browser storage. Backend restarts preserve sessions in `backend/data/game.sqlite3`; override with `COC_DB_PATH` if needed.
+Open http://localhost:5174. Vite proxies API calls to port 8000. Start New Game, submit a message, refresh, then select Continue Game. The browser remembers the last session ID; paste any saved ID to resume another session. All game content lives in SQLite, not browser storage. Backend restarts preserve sessions in `data/game.sqlite3`; override with `COC_DB_PATH` if needed.
 
 Run the MCP server separately, from this directory with the virtual environment active:
 
@@ -241,3 +241,369 @@ frontend production build passed, and a live MCP stdio client discovered and cal
 all three unchanged tools. Existing restart persistence tests passed.
 `git diff --check` passed. The existing Starlette/httpx TestClient deprecation
 warning remains.
+
+
+## Milestone 4A: Gemini development provider
+
+Gemini is the development runtime provider through Google's supported
+`google-genai` SDK. The default model is `gemini-3.7-flash`; `GEMINI_MODEL` overrides
+it. `GEMINI_API_KEY` is required only for live provider calls. Credentials belong
+in the backend process environment; they are never sent to React or committed.
+Environment files are Git-ignored and are not automatically loaded by the app.
+
+Install dependencies using `.venv/bin/python -m pip install -r backend/requirements.txt`.
+The provider-neutral `LLMRequest` carries system instruction, message history,
+user message, and optional Pydantic response schema. `LLMResponse` carries text,
+provider/model identity, and optional validated structured data. The existing
+message-list-to-text signature remains available for compatibility.
+`GeminiProvider` alone translates these contracts to the async Gemini Developer
+API with a 30-second HTTP timeout. Structured requests use SDK JSON/schema output
+configuration and Pydantic validation. Empty/invalid responses and SDK failures
+become controlled errors without raw credential-bearing SDK payloads. Call
+`await provider.aclose()` when an owned client is no longer needed.
+
+The placeholder FastAPI app does not instantiate Gemini. No Keeper orchestration,
+scenario retrieval, Paper Chase transmission, state mutation, MCP function calling,
+or gameplay has been connected to this provider.
+
+Normal pytest uses mocked SDK clients and requires neither credentials nor network.
+For an optional live check, set `GEMINI_API_KEY` privately in the shell, optionally
+set `GEMINI_MODEL`, and run from the repository root:
+
+```sh
+PYTHONPATH=backend .venv/bin/python -m app.llm.smoke
+```
+
+This manually invoked command sends two harmless test prompts, checks plain text
+and a tiny typed classification, closes the client, and prints status only. It
+never runs under pytest and never reads scenario data or prints the API key.
+Live verification is pending when credentials are unavailable.
+
+SDK references: [Google Gen AI Python SDK](https://googleapis.github.io/python-genai/)
+and [Gemini structured output](https://ai.google.dev/gemini-api/docs/structured-output).
+
+Milestone 4A verification: all 112 tests passed (89 existing plus 23 provider cases),
+the frontend production build passed, and `pip check` found no dependency conflicts.
+MCP files and scenario/state implementations are unchanged. Private Paper Chase
+data and environment files remain ignored; no credentials are staged/tracked.
+Live verification was not run because `GEMINI_API_KEY` was unavailable. The existing
+Starlette/httpx TestClient deprecation warning remains.
+
+
+### Manual Gemini model diagnostic
+
+With `GEMINI_API_KEY` already configured privately, run from the repository root:
+
+```sh
+PYTHONPATH=backend .venv/bin/python -m app.llm.model_diagnostic
+```
+
+The SDK lists models through the key, reports advertised actions, and tests up to
+five API-discovered Flash/Flash-Lite candidates sequentially with one harmless
+text prompt each. Each tested model reports PASS or sanitized failure/type/status.
+The SDK is configured for one attempt per request and a 30-second HTTP timeout.
+No scenario content, tools, grounding, caching, batch, Vertex AI or billing setup
+is used. The current default model is unchanged; a successful text probe does not
+prove structured-output support. Generated text and credentials are never printed.
+
+Use `--list-only` to inspect without generation, or `--limit 1` to probe at most
+one candidate. The model-list API does not expose billing/free-tier eligibility.
+The diagnostic therefore intersects API discovery with a conservative exact-ID
+policy of models documented with free standard text input/output on Google's
+[pricing page](https://ai.google.dev/gemini-api/docs/pricing), checked 2026-09-30.
+Unknown and paid-only models are skipped; no guessed or undiscovered ID is called.
+This policy is not a guarantee of project-specific quota or billing status. It
+assumes the user's project remains on the stated free tier and never enables
+billing. Other checkouts/date changes may require reviewing the eligibility policy.
+
+
+## Milestone 4B: first Keeper vertical slice
+
+`KeeperOrchestrator(states, scenarios, rules, mechanics, provider).act(session_id,
+message, turn_id=None)` is the programmatic entry point. It loads persistent state,
+assembles current-location/NPC/clue context plus relevant rules and generic guidance,
+requests a typed `KeeperDecision`, validates every entity reference and discovery
+dependency, resolves one scenario-defined skill check, and persists the resulting
+session. No frontend or HTTP route was changed; those remain the Milestone 1
+placeholder. This does not make the entire Paper Chase scenario playable.
+
+Implemented actions are a clue with exactly one explicitly authored skill check
+(e.g. searching the study for the journal) and ordinary observation without rolls.
+The scenario's skill/difficulty take priority over model suggestions, and the
+investigator must already have that skill value in state. A conservative explicit
+verb guard rejects guesses/questions being silently converted to searches. It is
+not a general natural-language understanding or meta-knowledge detector. Unknown
+IDs, unavailable clues, unsupported plans, combat, and missing skills return
+controlled responses without changing the session. The model has no state-write
+API or field for dice results. Full event/NPC interaction, OR/optional checks,
+movement, outcome chains and full combat are outside this slice.
+
+`StdioMechanicsClient` launches the existing local MCP server and provides typed
+`skill_check`, `roll_dice`, and `san_check` methods, normalizes/validates results,
+and bounds calls to 30 seconds. It performs no random logic. All three methods
+work; only scenario-authored skill checks are selected by this first orchestration
+slice. Dice/SAN execution plans remain future work, including unresolved scenario
+SAN loss values. An invalid MCP result or transport error is not automatically
+retried. Pending pushes record the original check, context and consequence
+reference but do not execute another roll; explicit push resolution remains future.
+
+The additive SQLite `keeper_turns` table journals each action and its baseline,
+status and trusted resolution before narration. Game-state fields/tables are
+unchanged. A resolved action can resume after interruption without rolling again;
+a completed `turn_id` returns the original result without new provider/tool calls.
+Reuse the same `turn_id` when retrying the same action. IDs cannot be reused for a
+different message/session. A pending interrupted tool call or failed call needs
+review because its outcome may be unknown. Another in-flight action is blocked.
+Atomic completion writes state, both messages and the tool-result event together,
+only if the session still matches its original baseline. A concurrent change is
+never overwritten; a conflicting recorded result needs explicit reconciliation.
+Turn records are retained; this prototype has no pruning/recovery UI.
+
+Narration receives only approved public-location text and authorized outcome
+passages, never raw player guesses, hidden context, untrusted narration guidance,
+flags or conversation history. To enforce visibility in this milestone, Gemini
+returns typed sentence selections rather than unrestricted prose. Only approved
+passages are rendered; new text is ignored and invalid narration falls back to
+those passages without rerolling. Success includes the selected clue's player
+reveal; failure includes no clue content. This deliberately constrains style;
+free-form narration would require further safeguards. No arbitrary model-generated
+facts or state changes are accepted.
+
+### Manual live Agent smoke
+
+With the private local scenario data installed and `GEMINI_API_KEY` configured
+privately in your shell, run from the repository root:
+
+```sh
+GEMINI_MODEL=gemini-3.5-flash-lite PYTHONPATH=backend .venv/bin/python -m app.agent.smoke
+```
+
+This explicitly sends scoped local Paper Chase context to Gemini for a single
+study-search turn, uses real stdio MCP, and verifies SQLite reload/idempotent retry.
+The smoke seeds a **test investigator** with Spot Hidden 50 (not a scenario fact),
+uses a temporary database inside the repository, prints only status/outcome/model,
+and removes that database afterward. A random failure is valid and produces a
+pending push rather than a forced successful clue reveal. This never runs under
+pytest and does not require a browser. No automatic billing/model switch occurs.
+
+Verification: 170 tests passed (144 existing plus 26 orchestrator cases), the
+frontend production build passed, and all three real MCP tools worked through
+the adapter. `git diff --check` passed. Live Gemini Agent verification is pending
+because this execution environment lacks `GEMINI_API_KEY`. The existing upstream
+Starlette/httpx TestClient deprecation warning remains.
+
+
+## Milestone 4C: React connected to the real Keeper
+
+The served `app.main:app` now follows:
+React → FastAPI → Keeper Agent → scoped Scenario/Rules → Gemini/MCP → SQLite.
+The existing UI layout is unchanged. New Game starts Paper Chase using its authored
+starting state and player premise as the opening Keeper message. The prototype
+investigator uses HP 10, SAN 50 and Spot Hidden 50; there is no character creation.
+Only this prepared scenario is accepted; private data must be installed locally.
+
+Action requests retain the `message` field and optionally add `turn_id`; the UI
+always supplies a stable random ID. Completed responses retain session ID, messages,
+status, timestamps and visible state. Real HTTP responses use an explicit allowlist:
+location/name, HP, SAN, skills, inventory, conditions, discovered clue IDs, phase,
+coarse time, and a push-availability boolean. Internal flags, NPC/custom state,
+pending-push references/consequences, tool event logs, Keeper context and decisions
+are excluded. Continue and reload use the same projection. Old placeholder sessions
+can be read but require New Game to use the real Agent.
+
+React automatically reloads its saved session, shows processing/error states and
+locks requests synchronously to prevent accidental double submission. An uncertain
+network response retains the pending turn ID in local browser storage; retrying the
+same message reuses it, so a completed mechanical result is never silently rerolled.
+A different explicit action receives a new ID. Ambiguous/pending turns can require
+review. Clarification/unsupported actions return controlled HTTP 400 responses;
+failed/pending/conflicting Agent turns return 409; missing backend provider config
+returns 503. These errors leave the last saved session shown. Provider and MCP errors
+never expose raw SDK data. Narration failure uses the previously documented safe
+approved-text fallback without discarding or rerolling a resolved check.
+
+The server instantiates the provider at startup using backend `GEMINI_API_KEY` and
+`GEMINI_MODEL`, and closes its client at shutdown. Missing credentials permit session
+viewing/creation but prevent Agent execution with a controlled error. Environment
+files are ignored but are not automatically loaded. The offline factory
+`create_app(db_path)` retains Milestone 1 behavior for its existing tests; production
+uses `create_app(real_keeper=True)`. New HTTP tests inject mocked provider/mechanics.
+
+### Local launch and manual browser verification
+
+In a backend terminal where `GEMINI_API_KEY` is already configured privately:
+
+```sh
+cd /Users/emmayue/Desktop/coc-ai-keeper
+GEMINI_MODEL=gemini-3.5-flash-lite .venv/bin/python -m uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+```
+
+In a separate frontend terminal:
+
+```sh
+cd /Users/emmayue/Desktop/coc-ai-keeper/frontend
+npm run dev
+```
+
+Open http://localhost:5174. Select New Game, send `I search Douglas's study.`, and
+observe the Keeper response. Both success and failure are valid; failure must not
+reveal the undiscovered journal. Refresh to verify restored conversation/location
+and visible state. Continue Game also accepts a saved session ID. Guessing hidden
+facts must not confirm or unlock them. No API key belongs in React or `VITE_*` config.
+
+Current limits remain one prepared scenario, limited supported actions, approved
+text narration, no push execution/full combat, and no arbitrary upload or RAG.
+Frontend code does not execute any mechanics. Live browser testing is left to the
+user's credential-configured environment.
+
+Verification: all 181 pytest cases passed (170 existing plus 11 HTTP cases), all
+four frontend interaction tests passed (`cd frontend && npm test`), production build
+passed, and `git diff --check` passed. MCP/Scenario/Rules implementations are
+unchanged; private data and environment files remain ignored. One existing
+Starlette/httpx deprecation warning remains.
+
+
+## Milestone 4D: bounded general investigation loop
+
+Structured decisions now classify observe, hypothesize, talk, move, investigate,
+mechanical_action, unsupported, or clarification_needed. The model resolves natural
+phrasing to authored entities and action categories; exact verb prefixes are no
+longer required for typed investigation decisions. Legacy decisions retain their
+existing guard. Speculative questions cannot become clue discoveries.
+
+Observation uses only the current public location description, without a roll or
+undiscovered clues. Hypotheses receive a neutral response without confirming hidden
+truth, changing flags, or discovering evidence. Narration still selects approved
+sentences, with natural connective phrases and concise unsuccessful-check metadata;
+free model prose and hidden reasoning never enter the final narration request.
+
+Talking requires one current-location NPC. Selected knowledge must belong to that
+NPC. Ordinary facts can be disclosed when authored conditions match; guarded facts
+remain gated and Keeper-only facts are never disclosed. Questions outside NPC
+knowledge receive a safe lack-of-information response. New typed NPC check
+alternatives, grants, and approaches encode the authored social gates. A successful
+check grants only authored flags and information; failure preserves the gate.
+Preflight validation happens before rolling. Jefferson's first conversation uses
+Charm OR Persuade; his guarded report supports Intimidate OR hard Persuade when
+explicitly approached that way. Odell uses APP OR Credit Rating. Alcohol bribes,
+changed-approach push execution, chained events, and full combat remain unsupported.
+
+Known destinations are supplied separately from the scoped reasoning context as
+public IDs/names. Movement accepts only repository-backed, known, accessible
+locations, records current/visited/known locations, and persists safe arrival
+narration. Scenario metadata declares initial known destinations; location access
+conditions guard private routes. Authored clue unlocks record location knowledge
+only after their access gate matches. Tracks alone do not discover the mausoleum.
+No model-proposed location, state mutation, skill, difficulty, or outcome is trusted.
+
+Investigation supports one mandatory authored check, one selected authored OR
+alternative, or explicitly authored no-check discovery. The gravestone requires
+prior favorite-grave identification and Spot Hidden OR Track. Psychology exposes
+Jefferson's withholding without unlocking his guarded report. Multiple mandatory
+checks and unplanned mechanics require a dedicated future plan. An unresolved push
+blocks another attempt at the same clue/knowledge item, including another turn ID;
+it does not block unrelated observation or movement. Turn receipts still prevent
+retry execution, and mechanics are saved before narration.
+
+The fixed prototype investigator now supplies these development values for new
+games: Spot Hidden 50, Charm 40, Persuade 40, Psychology 30, Track 20, Library Use 40,
+APP 50, Credit Rating 30, Intimidate 30. These are prototype defaults, not scenario
+facts or character creation. Existing saved profiles are not overwritten; missing
+required skills produce clarification. Start a new game for the browser exercise.
+HTTP projection adds accessible known-location IDs; internal NPC unlock records,
+flags, hidden destinations, and consequences remain private. No new UI is added.
+
+### Manual browser exercise
+
+Restart the backend with the existing privately configured key and model override:
+
+```sh
+cd /Users/emmayue/Desktop/coc-ai-keeper
+GEMINI_MODEL=gemini-3.5-flash-lite .venv/bin/python -m uvicorn app.main:app --app-dir backend --reload --host 127.0.0.1 --port 8000
+```
+
+Keep/start the existing frontend with `npm run dev` from the repository's
+`frontend` directory. Open http://localhost:5174, choose New Game, and submit these
+as six separate actions:
+
+1. `I look around the study.`
+2. `I ask Thomas what he knows about Douglas.`
+3. `Could Douglas himself be responsible for the missing books?`
+4. `I go to the cemetery.`
+5. `I talk to Jefferson.`
+6. `I inspect the ground around Douglas's favorite gravestone.`
+
+A–D should be ordinary safe responses without dice. E uses one authored social
+check; a genuine failure is valid. F can run an authored investigation check only
+if E established the favorite grave, otherwise it asks for clarification. Refresh
+after D/F to verify location, history, and discoveries persist. A failed check must
+not reveal its clue. Explicitly retrying the same request must not roll again.
+There is no automatic paid billing or model change. Live Gemini/browser results
+must be checked locally; offline tests do not claim live model validation.
+
+Verification commands (normal suites require no live credentials):
+
+```sh
+.venv/bin/python -m pytest -q -p no:cacheprovider --basetemp=.pytest_cache/4d
+cd frontend
+npm test
+npm run build
+```
+
+The 43 new offline behavior cases use synthetic fixtures, plus three optional local
+private-scenario cases (skipped if private data is absent). They cover observation,
+theories, NPC partitions/social checks, access gates, paraphrases, OR checks,
+no-check discovery, retry protection, natural failure narration, route unlocks,
+and multi-turn SQLite reload. Existing suites are retained unchanged.
+
+Milestone 4D verification: 225 backend/MCP tests passed (182 retained plus 43 new),
+9 frontend tests passed, Vite production build passed, and `git diff --check`
+passed. The existing Starlette/httpx TestClient deprecation warning remains.
+MCP mechanics are unchanged; private scenario files and credentials remain
+ignored/untracked. Live browser verification is pending in the local keyed shell.
+
+
+## Milestone 4D.1: conversational clarification
+
+Gameplay clarification now resolves a turn receipt without resolving mechanics.
+The player message and safe Keeper clarification are atomically appended to SQLite
+history while the entire GameState is preserved. The journal remains completed
+for retry purposes, with `outcome: clarification` recorded separately from receipt
+status. Repeated IDs return the same clarification/session without another model
+call or roll; interrupted resolved receipts resume through the same baseline guard.
+No existing journal rows or failed receipts are rewritten.
+
+The action API returns HTTP 200 and the normal projected session for both completed
+and clarification outcomes. `turn_outcome` distinguishes these outcomes from the
+session's active/completed lifecycle and remains available after reload. Unsupported
+gameplay remains HTTP 400 with `status: unsupported`; actual Agent/system failures
+remain controlled errors. React displays saved clarification in conversation and
+uses `Saved · Keeper clarification`, while unsupported requests receive gameplay
+feedback. Only technical failures display `Request failed — last saved session shown`.
+Compatibility feedback also handles old HTTP 400 clarification responses without
+calling them a system failure; those old responses do not imply saved history.
+
+Missing discovery explanations use actual authored prerequisite IDs, the saved
+visibility state, and optional player-safe `Clue.discovery_question` labels. Labels
+are questions to establish, never their hidden answers, and must be reviewed by
+the scenario author as safe for players. No Keeper truth, undiscovered player_reveal,
+internal flags, model prose, or narration guidance is used as the explanation.
+Scoped blocked-investigation references help the classifier retain the target even
+when its prerequisite is unmet. The private favorite-grave prerequisite supplies
+only the safe question `which gravestone Douglas favored`; its truth and discovery
+conditions are unchanged. Missing labels or unresolved targets receive a generic
+safe clarification rather than an invented explanation. Clarification needs no
+second narration LLM call.
+
+No gameplay support, MCP tool, scenario truth, or discovery requirement is changed.
+Restart/reload the backend and refresh the frontend before retesting the existing
+cemetery session. Submit the gravestone action while its prerequisite is missing;
+expect a normal Keeper reply and two persisted history messages, with no roll,
+discovery, or progression. Refresh to confirm the saved reply. A previously failed
+turn ID still needs review; send a newly authored submission rather than trying to
+reuse an old failed receipt.
+
+Milestone 4D.1 verification: 238 backend/MCP cases passed (225 retained plus 13
+new), 15 frontend tests passed (9 retained plus 6 new), the production build passed,
+and `git diff --check` passed. Only the existing Starlette/httpx deprecation warning
+remains. No live Gemini request or Git commit was made; MCP tools are unchanged.

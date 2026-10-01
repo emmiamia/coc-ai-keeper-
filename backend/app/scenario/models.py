@@ -56,6 +56,7 @@ class Scenario(KnowledgeModel):
     starting_state: GameState = Field(default_factory=GameState)
     core_entities: CoreEntities = Field(default_factory=CoreEntities)
     progression_phases: list[InvestigationPhase] = Field(default_factory=lambda: ['open_investigation', 'focused_investigation', 'climax', 'epilogue'])
+    initial_known_locations: list[str] = Field(default_factory=list)
     improvisation_policy: str
 
 class Location(KnowledgeModel):
@@ -68,12 +69,16 @@ class Location(KnowledgeModel):
     event_ids: list[str] = Field(default_factory=list)
     encounter_ids: list[str] = Field(default_factory=list)
     action_categories: list[str] = Field(default_factory=list)
+    access_conditions: Conditions = Field(default_factory=Conditions)
 
 class KnowledgeItem(KnowledgeModel):
     id: str
     information: str
     access: Literal['public', 'conversational', 'guarded', 'keeper_only']
     reveal_conditions: Conditions = Field(default_factory=Conditions)
+    check_alternatives: list[MechanicalCheck] = Field(default_factory=list)
+    check_grants: StateChanges = Field(default_factory=StateChanges)
+    check_approaches: list[str] = Field(default_factory=list)
     state_changes: StateChanges = Field(default_factory=StateChanges)
 
 class NPC(KnowledgeModel):
@@ -90,10 +95,13 @@ class Clue(KnowledgeModel):
     category: str
     keeper_truth: str
     player_reveal: str
+    # Authored player-safe question, never the undiscovered answer.
+    discovery_question: str | None = None
     availability: Conditions = Field(default_factory=Conditions)
     discovery_actions: list[str] = Field(default_factory=list)
     discovery_context: str = ''
     required_checks: list[MechanicalCheck] = Field(default_factory=list)
+    alternative_checks: list[MechanicalCheck] = Field(default_factory=list)
     success: Outcome = Field(default_factory=Outcome)
     failure: Outcome = Field(default_factory=Outcome)
     state_changes: StateChanges = Field(default_factory=StateChanges)

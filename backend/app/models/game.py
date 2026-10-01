@@ -30,6 +30,7 @@ class GameState(BaseModel):
     skills: dict[str, int] = Field(default_factory=dict)
     inventory: list[str] = Field(default_factory=list)
     conditions: list[str] = Field(default_factory=list)
+    known_locations: list[str] = Field(default_factory=list)
     visited_locations: list[str] = Field(default_factory=list)
     discovered_clues: list[str] = Field(default_factory=list)
     revealed_information: list[str] = Field(default_factory=list)

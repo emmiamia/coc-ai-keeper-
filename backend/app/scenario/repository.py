@@ -60,6 +60,15 @@ class JsonScenarioRepository:
             raise ValueError('Scenario ID does not match directory')
         return scenario
 
+    def known_location_ids(self, scenario_id, state):
+        scenario = self.load_scenario(scenario_id)
+        candidates = list(dict.fromkeys([*scenario.initial_known_locations,
+            *state.known_locations,*state.visited_locations,
+            *([scenario.starting_state.current_location] if scenario.starting_state.current_location else [])]))
+        # Canonical clue unlocks are permissions to pursue a route, not automatic
+        # knowledge. Only resolved state flags/recorded location knowledge grant entry.
+        return [i for i in candidates if self.get_location(scenario_id,i).access_conditions.matches(state)]
+
     def metadata(self, scenario_id):
         scenario = self.load_scenario(scenario_id)
         return ScenarioMetadata(scenario_id=scenario.id, title=scenario.title)
@@ -194,7 +203,10 @@ class JsonScenarioRepository:
             if isinstance(model, Outcome):
                 require('events', model.next_events)
                 require('encounters', model.next_encounters)
+            if isinstance(model, Scenario):
+                require('locations', model.initial_known_locations)
             if isinstance(model, GameState):
+                require('locations', model.known_locations)
                 require('clues', model.discovered_clues)
                 require('locations', model.visited_locations)
                 require('events', model.triggered_events)

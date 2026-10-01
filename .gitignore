@@ -11,3 +11,8 @@ scenario_data/*.json
 
 # Private populated local scenario data; never publish as repository content.
 scenario_data/paper_chase/
+
+# Local credentials/environment configuration.
+.env
+.env.*
+*.env

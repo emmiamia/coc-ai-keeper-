@@ -25,5 +25,9 @@
       "visitor"
     ]
   },
-  "improvisation_policy": "No invented canonical facts. Test references only."
+  "improvisation_policy": "No invented canonical facts. Test references only.",
+  "initial_known_locations": [
+    "room",
+    "hall"
+  ]
 }

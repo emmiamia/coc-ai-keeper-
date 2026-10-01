@@ -8,9 +8,11 @@ class GameStateRepository:
         with connect(path):
             pass
 
-    def create(self, scenario_id, starting_state: GameState | None = None):
+    def create(self, scenario_id, starting_state: GameState | None = None, opening_message: str | None = None):
         session = Session(session_id=str(uuid4()), scenario_id=scenario_id,
                           state=starting_state.model_copy(deep=True) if starting_state is not None else GameState())
+        if opening_message is not None:
+            session.messages.append(Message(role='keeper',content=opening_message))
         with connect(self.path) as db:
             db.execute('INSERT INTO sessions VALUES (?, ?)', (session.session_id, session.model_dump_json()))
         return session
